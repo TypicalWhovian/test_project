@@ -22,12 +22,16 @@ var (
 						  return new;
 						end;
 						$$;
+
+						drop type if exists exchange_way;
+						create type task_status as enum ('RUNNING', 'STOPPED', 'FINISHED');
 						
 						create table if not exists tasks
 						(
 							id              uuid                     default uuid_generate_v4() not null
 								constraint tasks_pk primary key,
 							request_id      uuid                                                not null,
+							status 			task_status 										not null,
 							steps_completed integer                  default 0                  not null
 								constraint is_number_of_steps_correct
 									check (steps_completed >= 0 and steps_completed <= 10),
