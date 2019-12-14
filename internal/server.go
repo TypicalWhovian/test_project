@@ -19,6 +19,8 @@ var (
 	ErrStartStoppedTask   = &Err{"unable to start stopped or finished task", 3}
 	ErrStartRunningTask   = &Err{"unable to start task: task with this id is already running", 4}
 	ErrTooLateToStop      = &Err{"too late to stop", 5}
+	ErrInvalidRequestType = &Err{"request type must be 'start' or 'stop'", 6}
+	ErrInvalidRequestId   = &Err{"request id must be uuid4", 7}
 )
 
 type Request struct {

@@ -40,9 +40,21 @@ func getRequestData(writer http.ResponseWriter, request *http.Request) (*Request
 	return requestData, err
 }
 
+func validateRequestData(data *Request, writer http.ResponseWriter) error {
+	if data.RequestType != "start" && data.RequestType != "stop" {
+		writeResponse(nil, ErrInvalidRequestType, http.StatusBadRequest, writer)
+	} else if _, err := uuid.Parse(data.RequestId); err != nil {
+		writeResponse(nil, ErrInvalidRequestId, http.StatusBadRequest, writer)
+	}
+	return nil
+}
+
 func (s *server) Handler(writer http.ResponseWriter, request *http.Request) {
 	requestData, err := getRequestData(writer, request)
 	if err != nil {
+		return
+	}
+	if err := validateRequestData(requestData, writer); err != nil {
 		return
 	}
 	task := new(db.Task)
