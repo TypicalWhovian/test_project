@@ -3,6 +3,7 @@ package internal
 import (
 	"database/sql"
 	"fmt"
+	"github.com/go-pg/pg/v9"
 	"github.com/gorilla/mux"
 	"github.com/kelseyhightower/envconfig"
 	_ "github.com/lib/pq"
@@ -12,9 +13,17 @@ import (
 	"time"
 )
 
+var (
+	ErrInvalidRequestBody = &Err{"request body is invalid", 1}
+	ErrInternalServer     = &Err{"internal server error", 2}
+	ErrStartStoppedTask   = &Err{"unable to start stopped or finished task", 3}
+	ErrStartRunningTask   = &Err{"unable to start task: task with this id is already running", 4}
+	ErrTooLateToStop      = &Err{"too late to stop", 5}
+)
+
 type Request struct {
-	requestId   string `json:"requestId"`
-	requestType string `json:"type"`
+	RequestId   string `json:"requestId"`
+	RequestType string `json:"type"`
 }
 
 type Err struct {
@@ -27,12 +36,8 @@ type Response struct {
 	Error *Err        `json:"error"`
 }
 
-var (
-	ErrInvalidRequestBody = &Err{"request body is invalid", 1}
-)
-
 type server struct {
-	db *sql.DB
+	db *pg.DB
 }
 
 type Env struct {
@@ -43,21 +48,17 @@ type Env struct {
 	PgAddress  string `envconfig:"POSTGRES_ADDRESS"`
 }
 
-func Run() {
-	var vars Env
-	err := envconfig.Process("", &vars)
-	if err != nil {
-		log.Fatal(err)
-	}
-	var pgDb *sql.DB
+func runMigrations(vars Env) {
+	var migrationsDbConn *sql.DB
+	var err error
 	postgresDsn := fmt.Sprintf("postgresql://%s:%s@%s/%s?sslmode=disable", vars.PgUsername, vars.PgPassword,
 		vars.PgAddress, vars.PgDatabase)
 	for {
-		pgDb, err = sql.Open("postgres", postgresDsn)
+		migrationsDbConn, err = sql.Open("postgres", postgresDsn)
 		if err != nil {
 			log.Printf("error while opening pgDb: %v", err)
 		}
-		err = pgDb.Ping()
+		err = migrationsDbConn.Ping()
 		if err != nil {
 			log.Printf("error while opening pgDb: %v", err)
 		}
@@ -66,10 +67,26 @@ func Run() {
 		}
 		time.Sleep(2 * time.Second)
 	}
-	defer pgDb.Close()
-	if err := db.Migrate(pgDb); err != nil {
+	defer migrationsDbConn.Close()
+	if err := db.Migrate(migrationsDbConn); err != nil {
 		log.Fatalf("error while migrating: %v", err)
 	}
+
+}
+
+func Run() {
+	var vars Env
+	err := envconfig.Process("", &vars)
+	if err != nil {
+		log.Fatal(err)
+	}
+	runMigrations(vars)
+	pgDb := pg.Connect(&pg.Options{
+		User:     vars.PgUsername,
+		Password: vars.PgPassword,
+		Database: vars.PgDatabase,
+		Addr:     vars.PgAddress,
+	})
 	server := &server{db: pgDb}
 	r := mux.NewRouter()
 	r.HandleFunc("/", server.Handler).Methods(http.MethodPost)
