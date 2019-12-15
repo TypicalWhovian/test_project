@@ -14,14 +14,15 @@ import (
 )
 
 var (
-	ErrInvalidRequestBody = &Err{"request body is invalid", 1}
-	ErrInternalServer     = &Err{"internal server error", 2}
-	ErrStartStoppedTask   = &Err{"unable to start stopped or finished task", 3}
-	ErrStartRunningTask   = &Err{"unable to start task: task with this id is already running", 4}
-	ErrTooLateToStop      = &Err{"too late to stop", 5}
-	ErrInvalidRequestType = &Err{"request type must be 'start' or 'stop'", 6}
-	ErrInvalidRequestId   = &Err{"request id must be uuid4", 7}
-	ErrTaskIsNotRunning   = &Err{"unable to stop the task: it is not running", 8}
+	ErrInvalidRequestBody         = &Err{"request body is invalid", 1}
+	ErrInternalServer             = &Err{"internal server error", 2}
+	ErrStartStoppedTask           = &Err{"unable to start stopped or finished task", 3}
+	ErrStartRunningTask           = &Err{"unable to start task: task with this id is already running", 4}
+	ErrTooLateToStop              = &Err{"too late to stop", 5}
+	ErrInvalidRequestType         = &Err{"request type must be 'start' or 'stop'", 6}
+	ErrInvalidRequestId           = &Err{"request id must be uuid4", 7}
+	ErrTaskIsNotRunning           = &Err{"unable to stop the task: it is not running", 8}
+	ErrTaskStoppedDuringExecution = &Err{"task was stopped during its execution", 9}
 )
 
 type Request struct {

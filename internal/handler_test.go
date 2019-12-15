@@ -97,7 +97,7 @@ func TestSuccessSeveralStopServer_Handler(t *testing.T) {
 			if err := json.NewDecoder(resp.Body).Decode(&responseData); err != nil {
 				t.Fatal(err)
 			}
-			if responseData.Error != nil {
+			if responseData.Error != nil && responseData.Error.Code != ErrTaskStoppedDuringExecution.Code {
 				t.Fatal(responseData.Error)
 			}
 		}(i)

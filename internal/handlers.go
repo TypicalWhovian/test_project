@@ -74,9 +74,11 @@ func (s *server) Handler(writer http.ResponseWriter, request *http.Request) {
 	}
 	if requestData.RequestType == "start" {
 		if task.Status == db.STATUSSTOPPED || task.Status == db.STATUSFINISHED {
+			// this is undefined behaviour so just reject the request
 			writeResponse(nil, ErrStartStoppedTask, http.StatusBadRequest, writer)
 			return
 		} else if !isTaskNew {
+			// if the task is already running it cannot be started again
 			writeResponse(nil, ErrStartRunningTask, http.StatusBadRequest, writer)
 			return
 		}
@@ -86,8 +88,7 @@ func (s *server) Handler(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 		n := 10
-		s.db.Conn().PoolStats()
-		for i := 1; i <= 10; i++ {
+		for i := 1; i <= n; i++ {
 			sleepOneSec()
 			err := s.db.Model(task).WherePK().First()
 			if err != nil {
@@ -95,7 +96,8 @@ func (s *server) Handler(writer http.ResponseWriter, request *http.Request) {
 				return
 			}
 			if task.Status == db.STATUSSTOPPED {
-				writeResponse(nil, nil, http.StatusOK, writer)
+				// this is undefined behaviour
+				writeResponse(nil, ErrTaskStoppedDuringExecution, http.StatusConflict, writer)
 				return
 			}
 			task.StepsCompleted++
