@@ -109,6 +109,10 @@ func (s *server) Handler(writer http.ResponseWriter, request *http.Request) {
 		}
 		writeResponse(nil, nil, http.StatusOK, writer)
 	} else if requestData.RequestType == "stop" {
+		if isTaskNew {
+			writeResponse(nil, ErrTaskIsNotRunning, http.StatusBadRequest, writer)
+			return
+		}
 		if task.StepsCompleted > 5 {
 			writeResponse(nil, ErrTooLateToStop, http.StatusBadRequest, writer)
 			return
