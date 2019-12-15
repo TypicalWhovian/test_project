@@ -1,9 +1,29 @@
 version: '3.7'
 
 services:
+
   db:
     image: postgres:12
     env_file:
       - configs/docker.env
     ports:
       - 8088:5432
+
+  test:
+    depends_on:
+      - test_db
+    build:
+      context: .
+      dockerfile: ./test.dockerfile
+    env_file:
+      - ./configs/testing.docker.env
+    command: ash -I -c "go test ./internal -test.v -cover"
+    volumes:
+      - ./:/go/src/test_project
+
+  test_db:
+    image: postgres:12
+    env_file:
+      - configs/docker.env
+    ports:
+      - 8089:5432
