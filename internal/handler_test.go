@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/google/uuid"
+	"math/rand"
 	"net/http"
 	"os"
 	"sync"
@@ -55,6 +56,7 @@ func TestSuccessSeveralStartServer_Handler(t *testing.T) {
 				t.Fatal(err)
 			}
 			responseData := new(Response)
+			defer resp.Body.Close()
 			if err := json.NewDecoder(resp.Body).Decode(&responseData); err != nil {
 				t.Fatal(err)
 			}
@@ -69,7 +71,70 @@ func TestSuccessSeveralStartServer_Handler(t *testing.T) {
 			}
 		}()
 	}
-	<- finished
+	<-finished
+}
+
+func TestSuccessSeveralStopServer_Handler(t *testing.T) {
+	n := 5_000
+	var ids []string
+	for i := 0; i < n; i++ {
+		ids = append(ids, uuid.New().String())
+	}
+	nFinished := 0
+	var m sync.Mutex
+	finished := make(chan bool, 1)
+	for i := 0; i < n; i++ {
+		go func(i int) {
+			resp, err := post(map[string]string{
+				"requestId": ids[i],
+				"type":      "start",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			responseData := new(Response)
+			defer resp.Body.Close()
+			if err := json.NewDecoder(resp.Body).Decode(&responseData); err != nil {
+				t.Fatal(err)
+			}
+			if responseData.Error != nil {
+				t.Fatal(responseData.Error)
+			}
+		}(i)
+	}
+	time.Sleep(time.Second * 8)
+	rand.Seed(time.Now().Unix())
+	nStop := n / 2
+	for i := 0; i < nStop; i++ {
+		go func() {
+			randomId := ids[rand.Intn(n)]
+			resp, err := post(map[string]string{
+				"requestId": randomId,
+				"type":      "stop",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			responseData := new(Response)
+			defer resp.Body.Close()
+			if err := json.NewDecoder(resp.Body).Decode(&responseData); err != nil {
+				t.Fatal(err)
+			}
+			if responseData.Error != nil {
+				code := responseData.Error.Code
+				if code != ErrTooLateToStop.Code && code != ErrTaskIsNotRunning.Code && code != ErrStartStoppedTask.Code {
+					t.Fatal(responseData.Error)
+				}
+			}
+			m.Lock()
+			nFinished++
+			m.Unlock()
+			if nFinished == nStop {
+				finished <- true
+			}
+		}()
+	}
+	<-finished
 }
 
 func TestSuccessStopServer_Handler(t *testing.T) {

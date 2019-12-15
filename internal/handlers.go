@@ -120,6 +120,8 @@ func (s *server) Handler(writer http.ResponseWriter, request *http.Request) {
 		task.Status = db.STATUSSTOPPED
 		if err := s.db.Update(task); err != nil {
 			writeResponse(nil, ErrInternalServer, http.StatusInternalServerError, writer)
+			return
 		}
+		writeResponse(nil, nil, http.StatusOK, writer)
 	}
 }
