@@ -2,6 +2,18 @@ version: '3.7'
 
 services:
 
+  app:
+    depends_on:
+      - db
+    build: .
+    env_file:
+      - ./configs/docker.env
+    command: ash -I -c "go run ./cmd/test_project/main.go"
+    volumes:
+      - ./:/go/src/test_project
+    ports:
+    - 8081:8081
+
   db:
     image: postgres:12
     env_file:
@@ -12,9 +24,7 @@ services:
   test:
     depends_on:
       - test_db
-    build:
-      context: .
-      dockerfile: ./test.dockerfile
+    build: .
     env_file:
       - ./configs/testing.docker.env
     command: ash -I -c "go test ./internal -test.v -cover"
