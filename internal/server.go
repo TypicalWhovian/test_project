@@ -88,6 +88,7 @@ func Run() {
 		Password: vars.PgPassword,
 		Database: vars.PgDatabase,
 		Addr:     vars.PgAddress,
+		PoolSize: 90, // 100 connections is max for default postgres configuration in docker
 	})
 	server := &server{db: pgDb}
 	r := mux.NewRouter()
@@ -95,5 +96,4 @@ func Run() {
 	http.Handle("/", r)
 	log.Print("listening on ", vars.Port)
 	log.Fatal(http.ListenAndServe(":"+vars.Port, nil))
-
 }

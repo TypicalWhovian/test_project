@@ -73,11 +73,11 @@ func (s *server) Handler(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	if requestData.RequestType == "start" {
-		if !isTaskNew {
-			writeResponse(nil, ErrStartRunningTask, http.StatusBadRequest, writer)
-			return
-		} else if task.Status == db.STATUSSTOPPED || task.Status == db.STATUSFINISHED {
+		if task.Status == db.STATUSSTOPPED || task.Status == db.STATUSFINISHED {
 			writeResponse(nil, ErrStartStoppedTask, http.StatusBadRequest, writer)
+			return
+		} else if !isTaskNew {
+			writeResponse(nil, ErrStartRunningTask, http.StatusBadRequest, writer)
 			return
 		}
 
@@ -86,19 +86,24 @@ func (s *server) Handler(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 		n := 10
+		s.db.Conn().PoolStats()
 		for i := 1; i <= 10; i++ {
 			sleepOneSec()
+			err := s.db.Model(task).WherePK().First()
+			if err != nil {
+				writeResponse(nil, ErrInternalServer, http.StatusInternalServerError, writer)
+				return
+			}
+			if task.Status == db.STATUSSTOPPED {
+				writeResponse(nil, nil, http.StatusOK, writer)
+				return
+			}
 			task.StepsCompleted++
 			if i == n {
 				task.Status = db.STATUSFINISHED
 			}
-			var status string
-			if _, err := s.db.Model(task).Returning("status", &status).WherePK().Update(); err != nil {
+			if err := s.db.Update(task); err != nil {
 				writeResponse(nil, ErrInternalServer, http.StatusInternalServerError, writer)
-				return
-			}
-			if status == db.STATUSSTOPPED {
-				writeResponse(nil, nil, http.StatusOK, writer)
 				return
 			}
 		}
